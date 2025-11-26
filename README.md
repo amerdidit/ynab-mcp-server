@@ -46,8 +46,10 @@ Available tools:
 * SearchCategories - searches categories by name or group name (case-insensitive partial match) from local cache
 * GetCategory - gets a single category by ID from local cache
 * SyncPayees - syncs payees from YNAB to local cache, returns count and sync stats
+* ListPayees - lists all payees with pagination, sorted alphabetically (useful for finding duplicates)
 * SearchPayees - searches payees by name (case-insensitive partial match) from local cache
 * GetPayee - gets a single payee by ID from local cache
+* RenamePayee - renames a payee (updates both YNAB and local cache)
 * BudgetSummary - provides a summary of categories that are underfunded and accounts that are low
 * GetUnapprovedTransactions - retrieve all unapproved transactions
 * CreateTransaction - creates a transaction for a specified budget and account.

@@ -14,6 +14,8 @@ import * as GetCategoryTool from "./tools/GetCategoryTool.js";
 import * as SyncPayeesTool from "./tools/SyncPayeesTool.js";
 import * as GetPayeeTool from "./tools/GetPayeeTool.js";
 import * as SearchPayeesTool from "./tools/SearchPayeesTool.js";
+import * as ListPayeesTool from "./tools/ListPayeesTool.js";
+import * as RenamePayeeTool from "./tools/RenamePayeeTool.js";
 import * as GetUnapprovedTransactionsTool from "./tools/GetUnapprovedTransactionsTool.js";
 import * as BudgetSummaryTool from "./tools/BudgetSummaryTool.js";
 import * as CreateTransactionTool from "./tools/CreateTransactionTool.js";
@@ -87,6 +89,18 @@ server.registerTool(SearchPayeesTool.name, {
   description: SearchPayeesTool.description,
   inputSchema: SearchPayeesTool.inputSchema,
 }, async (input) => SearchPayeesTool.execute(input, api));
+
+server.registerTool(ListPayeesTool.name, {
+  title: "List Payees",
+  description: ListPayeesTool.description,
+  inputSchema: ListPayeesTool.inputSchema,
+}, async (input) => ListPayeesTool.execute(input, api));
+
+server.registerTool(RenamePayeeTool.name, {
+  title: "Rename Payee",
+  description: RenamePayeeTool.description,
+  inputSchema: RenamePayeeTool.inputSchema,
+}, async (input) => RenamePayeeTool.execute(input, api));
 
 server.registerTool(GetUnapprovedTransactionsTool.name, {
   title: "Get Unapproved Transactions",
