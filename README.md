@@ -42,6 +42,9 @@ Available tools:
 * ListAccounts - lists all accounts with IDs, names, types, and balances
 * GetAccount - gets a single account by ID with detailed information
 * ListCategories - lists all categories organized by category group with budget amounts
+* SyncPayees - syncs payees from YNAB to local cache, returns count and sync stats
+* SearchPayees - searches payees by name (case-insensitive partial match) from local cache
+* GetPayee - gets a single payee by ID from local cache
 * BudgetSummary - provides a summary of categories that are underfunded and accounts that are low
 * GetUnapprovedTransactions - retrieve all unapproved transactions
 * CreateTransaction - creates a transaction for a specified budget and account.
@@ -51,6 +54,9 @@ Available tools:
   * requires a transaction ID to approve
   * can be used in conjunction with GetUnapprovedTransactions to approve pending transactions
   * After calling get unapproved transactions, prompt: `approve the transaction for $6.95 on the Apple Card`
+
+### Payee Caching
+Payee tools use local caching to avoid MCP response truncation with large payee lists. The cache is stored at `~/.ynab-mcp/cache/<budget-id>/payees.json` and uses YNAB's `server_knowledge` for efficient delta syncs. Each payee tool automatically syncs before returning results, ensuring data is always fresh.
 
 Next:
 * be able to approve multiple transactions with 1 call
