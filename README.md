@@ -39,11 +39,14 @@ tool first, this prompt should happen asking you to set your default budget.
 ## Current state
 Available tools:
 * ListBudgets - lists available budgets on your account
+* ListAccounts - lists all accounts with IDs, names, types, and balances
+* FetchAccount - gets a single account by ID with detailed information
+* ListCategories - lists all categories organized by category group with budget amounts
 * BudgetSummary - provides a summary of categories that are underfunded and accounts that are low
 * GetUnapprovedTransactions - retrieve all unapproved transactions
 * CreateTransaction - creates a transaction for a specified budget and account.
   * example prompt: `Add a transaction to my Ally account for $3.98 I spent at REI today`
-  * requires GetBudget to be called first so we know the account id
+  * requires ListAccounts to be called first so we know the account id
 * ApproveTransaction - approves an existing transaction in your YNAB budget
   * requires a transaction ID to approve
   * can be used in conjunction with GetUnapprovedTransactions to approve pending transactions
