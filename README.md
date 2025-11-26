@@ -62,6 +62,13 @@ Available tools:
 * DeleteTransaction - permanently deletes a transaction from your YNAB budget
   * requires a transaction ID to delete
   * this action cannot be undone
+* SearchTransactions - searches transactions with flexible filtering options
+  * filter by date range, amount range, payee, category, memo text, cleared/approved status, flag color
+  * supports uncategorized transaction filtering
+  * example prompt: `Find all transactions at Amazon in the last 30 days`
+* UpdateTransaction - updates an existing transaction
+  * can modify any combination of: category, payee, memo, amount, date, cleared status, approved status, flag color
+  * example prompt: `Change the category of that transaction to Groceries`
 
 ### Local Caching
 
@@ -78,9 +85,9 @@ Payee and category tools use local caching to work around two limitations:
 - Run `sync_payees` or `sync_categories` to manually refresh the cache
 
 Next:
-* be able to approve multiple transactions with 1 call
-* updateCategory tool - or updateTransaction more general tool if I can get optional parameters to work correctly with zod & mcp framework
-* move off of mcp framework to use the model context protocol sdk directly?
+* Category Transfer - move money between categories
+* Scheduled Transactions - view/manage recurring transactions
+* Batch operations - approve multiple transactions with 1 call
 
 
 ## Quick Start

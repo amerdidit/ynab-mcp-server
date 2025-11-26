@@ -10,7 +10,7 @@
 - [x] **Search Payees** - Search/filter payees by name from cache (case-insensitive partial match)
 - [x] **Rename Payee** - Rename a payee (only name is editable via API)
 - [x] **List Payees** - Paginated list of all payees (useful for finding duplicates)
-- [ ] **Update Transaction** - Edit existing transactions (category, payee, memo, amount, etc.)
+- [x] **Update Transaction** - Edit existing transactions (category, payee, memo, amount, etc.)
 - [x] **Search Transactions** - Search/filter transaction history with date range, amount, payee, category, memo, status filters
 
 ## Nice to Have

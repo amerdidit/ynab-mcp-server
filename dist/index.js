@@ -21,6 +21,7 @@ import * as CreateTransactionTool from "./tools/CreateTransactionTool.js";
 import * as ApproveTransactionTool from "./tools/ApproveTransactionTool.js";
 import * as DeleteTransactionTool from "./tools/DeleteTransactionTool.js";
 import * as SearchTransactionsTool from "./tools/SearchTransactionsTool.js";
+import * as UpdateTransactionTool from "./tools/UpdateTransactionTool.js";
 const server = new McpServer({
     name: "ynab-mcp-server",
     version: "0.1.2",
@@ -118,6 +119,11 @@ server.registerTool(SearchTransactionsTool.name, {
     description: SearchTransactionsTool.description,
     inputSchema: SearchTransactionsTool.inputSchema,
 }, async (input) => SearchTransactionsTool.execute(input, api));
+server.registerTool(UpdateTransactionTool.name, {
+    title: "Update Transaction",
+    description: UpdateTransactionTool.description,
+    inputSchema: UpdateTransactionTool.inputSchema,
+}, async (input) => UpdateTransactionTool.execute(input, api));
 // Start the server
 async function main() {
     const transport = new StdioServerTransport();
