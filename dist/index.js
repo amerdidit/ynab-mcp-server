@@ -5,6 +5,7 @@ import * as ynab from "ynab";
 // Import all tools
 import * as ListBudgetsTool from "./tools/ListBudgetsTool.js";
 import * as ListAccountsTool from "./tools/ListAccountsTool.js";
+import * as FetchAccountTool from "./tools/FetchAccountTool.js";
 import * as GetUnapprovedTransactionsTool from "./tools/GetUnapprovedTransactionsTool.js";
 import * as BudgetSummaryTool from "./tools/BudgetSummaryTool.js";
 import * as CreateTransactionTool from "./tools/CreateTransactionTool.js";
@@ -26,6 +27,11 @@ server.registerTool(ListAccountsTool.name, {
     description: ListAccountsTool.description,
     inputSchema: ListAccountsTool.inputSchema,
 }, async (input) => ListAccountsTool.execute(input, api));
+server.registerTool(FetchAccountTool.name, {
+    title: "Fetch Account",
+    description: FetchAccountTool.description,
+    inputSchema: FetchAccountTool.inputSchema,
+}, async (input) => FetchAccountTool.execute(input, api));
 server.registerTool(GetUnapprovedTransactionsTool.name, {
     title: "Get Unapproved Transactions",
     description: GetUnapprovedTransactionsTool.description,
