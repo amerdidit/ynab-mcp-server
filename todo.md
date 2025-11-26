@@ -18,4 +18,8 @@
 - [ ] **Scheduled Transactions** - View/manage recurring transactions
 - [ ] **Pagination & Filtering** - Add pagination/filtering to list tools to handle large datasets (accounts, categories, transactions)
 - [ ] **Clear Payee Cache** - Tool to clear local payee cache for troubleshooting
-- [ ] **Apply Caching to Categories/Accounts** - Extend caching pattern to other large datasets
+- [x] **Apply Caching to Categories** - Categories now use delta sync caching like payees
+  - `sync_categories` - Sync categories to local cache
+  - `search_categories` - Search categories by name
+  - `get_category` - Get single category by ID
+  - `list_categories` - Now uses cache by default

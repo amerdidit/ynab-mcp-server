@@ -41,7 +41,10 @@ Available tools:
 * ListBudgets - lists available budgets on your account
 * ListAccounts - lists all accounts with IDs, names, types, and balances
 * GetAccount - gets a single account by ID with detailed information
-* ListCategories - lists all categories organized by category group with budget amounts
+* ListCategories - lists all categories organized by category group with budget amounts (uses cache)
+* SyncCategories - syncs categories from YNAB to local cache, returns count and sync stats
+* SearchCategories - searches categories by name or group name (case-insensitive partial match) from local cache
+* GetCategory - gets a single category by ID from local cache
 * SyncPayees - syncs payees from YNAB to local cache, returns count and sync stats
 * SearchPayees - searches payees by name (case-insensitive partial match) from local cache
 * GetPayee - gets a single payee by ID from local cache
@@ -55,8 +58,19 @@ Available tools:
   * can be used in conjunction with GetUnapprovedTransactions to approve pending transactions
   * After calling get unapproved transactions, prompt: `approve the transaction for $6.95 on the Apple Card`
 
-### Payee Caching
-Payee tools use local caching to avoid MCP response truncation with large payee lists. The cache is stored at `~/.ynab-mcp/cache/<budget-id>/payees.json` and uses YNAB's `server_knowledge` for efficient delta syncs. Each payee tool automatically syncs before returning results, ensuring data is always fresh.
+### Local Caching
+
+Payee and category tools use local caching to work around two limitations:
+
+1. **YNAB API Limitation**: The YNAB API doesn't support pagination or filtering for payees/categories. A single request returns the entire dataset, which can be 1000+ payees and 150+ categories for long-running budgets.
+
+2. **MCP Response Truncation**: Large MCP tool responses get truncated by LLM context limits, causing incomplete data to be returned to the AI.
+
+**How it works:**
+- Caches are stored at `~/.ynab-mcp/cache/<budget-id>/`
+- Uses YNAB's `server_knowledge` for efficient delta syncs (only fetches changes since last sync)
+- Tools that read from cache auto-sync if cache is empty
+- Run `sync_payees` or `sync_categories` to manually refresh the cache
 
 Next:
 * be able to approve multiple transactions with 1 call

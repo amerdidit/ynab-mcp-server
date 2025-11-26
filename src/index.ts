@@ -8,6 +8,9 @@ import * as ListBudgetsTool from "./tools/ListBudgetsTool.js";
 import * as ListAccountsTool from "./tools/ListAccountsTool.js";
 import * as GetAccountTool from "./tools/GetAccountTool.js";
 import * as ListCategoriesTool from "./tools/ListCategoriesTool.js";
+import * as SyncCategoriesTool from "./tools/SyncCategoriesTool.js";
+import * as SearchCategoriesTool from "./tools/SearchCategoriesTool.js";
+import * as GetCategoryTool from "./tools/GetCategoryTool.js";
 import * as SyncPayeesTool from "./tools/SyncPayeesTool.js";
 import * as GetPayeeTool from "./tools/GetPayeeTool.js";
 import * as SearchPayeesTool from "./tools/SearchPayeesTool.js";
@@ -48,6 +51,24 @@ server.registerTool(ListCategoriesTool.name, {
   description: ListCategoriesTool.description,
   inputSchema: ListCategoriesTool.inputSchema,
 }, async (input) => ListCategoriesTool.execute(input, api));
+
+server.registerTool(SyncCategoriesTool.name, {
+  title: "Sync Categories",
+  description: SyncCategoriesTool.description,
+  inputSchema: SyncCategoriesTool.inputSchema,
+}, async (input) => SyncCategoriesTool.execute(input, api));
+
+server.registerTool(SearchCategoriesTool.name, {
+  title: "Search Categories",
+  description: SearchCategoriesTool.description,
+  inputSchema: SearchCategoriesTool.inputSchema,
+}, async (input) => SearchCategoriesTool.execute(input, api));
+
+server.registerTool(GetCategoryTool.name, {
+  title: "Get Category",
+  description: GetCategoryTool.description,
+  inputSchema: GetCategoryTool.inputSchema,
+}, async (input) => GetCategoryTool.execute(input, api));
 
 server.registerTool(SyncPayeesTool.name, {
   title: "Sync Payees",
