@@ -20,6 +20,8 @@ import * as GetUnapprovedTransactionsTool from "./tools/GetUnapprovedTransaction
 import * as BudgetSummaryTool from "./tools/BudgetSummaryTool.js";
 import * as CreateTransactionTool from "./tools/CreateTransactionTool.js";
 import * as ApproveTransactionTool from "./tools/ApproveTransactionTool.js";
+import * as DeleteTransactionTool from "./tools/DeleteTransactionTool.js";
+import * as SearchTransactionsTool from "./tools/SearchTransactionsTool.js";
 
 const server = new McpServer({
   name: "ynab-mcp-server",
@@ -125,6 +127,18 @@ server.registerTool(ApproveTransactionTool.name, {
   description: ApproveTransactionTool.description,
   inputSchema: ApproveTransactionTool.inputSchema,
 }, async (input) => ApproveTransactionTool.execute(input, api));
+
+server.registerTool(DeleteTransactionTool.name, {
+  title: "Delete Transaction",
+  description: DeleteTransactionTool.description,
+  inputSchema: DeleteTransactionTool.inputSchema,
+}, async (input) => DeleteTransactionTool.execute(input, api));
+
+server.registerTool(SearchTransactionsTool.name, {
+  title: "Search Transactions",
+  description: SearchTransactionsTool.description,
+  inputSchema: SearchTransactionsTool.inputSchema,
+}, async (input) => SearchTransactionsTool.execute(input, api));
 
 // Start the server
 async function main() {

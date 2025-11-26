@@ -59,6 +59,9 @@ Available tools:
   * requires a transaction ID to approve
   * can be used in conjunction with GetUnapprovedTransactions to approve pending transactions
   * After calling get unapproved transactions, prompt: `approve the transaction for $6.95 on the Apple Card`
+* DeleteTransaction - permanently deletes a transaction from your YNAB budget
+  * requires a transaction ID to delete
+  * this action cannot be undone
 
 ### Local Caching
 
