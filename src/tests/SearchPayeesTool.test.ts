@@ -14,7 +14,7 @@ describe("SearchPayeesTool", () => {
     };
   };
 
-  const testBudgetId = "default-budget-id";
+  const testBudgetId = "test-search-payees-budget";
   const testCacheDir = path.join(os.homedir(), ".ynab-mcp", "cache", testBudgetId);
 
   beforeEach(() => {

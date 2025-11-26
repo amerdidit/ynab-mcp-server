@@ -15,7 +15,7 @@ describe("RenamePayeeTool", () => {
     };
   };
 
-  const testBudgetId = "default-budget-id";
+  const testBudgetId = "test-rename-payee-budget";
   const testCacheDir = path.join(os.homedir(), ".ynab-mcp", "cache", testBudgetId);
 
   beforeEach(() => {
