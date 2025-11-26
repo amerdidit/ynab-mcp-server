@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import * as ynab from "ynab";
 
 // Import all tools
 import * as ListBudgetsTool from "./tools/ListBudgetsTool.js";
@@ -23,14 +22,17 @@ import * as ApproveTransactionTool from "./tools/ApproveTransactionTool.js";
 import * as DeleteTransactionTool from "./tools/DeleteTransactionTool.js";
 import * as SearchTransactionsTool from "./tools/SearchTransactionsTool.js";
 import * as UpdateTransactionTool from "./tools/UpdateTransactionTool.js";
+import * as GetRateLimitStatusTool from "./tools/GetRateLimitStatusTool.js";
+
+import { createTrackedApi } from "./apiWrapper.js";
 
 const server = new McpServer({
   name: "ynab-mcp-server",
   version: "0.1.2",
 });
 
-// Initialize YNAB API
-const api = new ynab.API(process.env.YNAB_API_TOKEN || "");
+// Initialize YNAB API with rate limit tracking
+const api = createTrackedApi(process.env.YNAB_API_TOKEN || "");
 
 // Register all tools
 server.registerTool(ListBudgetsTool.name, {
@@ -146,6 +148,12 @@ server.registerTool(UpdateTransactionTool.name, {
   description: UpdateTransactionTool.description,
   inputSchema: UpdateTransactionTool.inputSchema,
 }, async (input) => UpdateTransactionTool.execute(input, api));
+
+server.registerTool(GetRateLimitStatusTool.name, {
+  title: "Get Rate Limit Status",
+  description: GetRateLimitStatusTool.description,
+  inputSchema: GetRateLimitStatusTool.inputSchema,
+}, async (input) => GetRateLimitStatusTool.execute(input));
 
 // Start the server
 async function main() {

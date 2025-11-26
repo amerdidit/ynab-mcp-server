@@ -1,8 +1,16 @@
 import { z } from "zod";
 import * as ynab from "ynab";
 
+const subtransactionSchema = z.object({
+  amount: z.number().describe("Subtransaction amount in dollars (negative for outflow, positive for inflow)"),
+  categoryId: z.string().optional().describe("Category ID for this split"),
+  payeeId: z.string().optional().describe("Payee ID (optional, can differ from parent)"),
+  payeeName: z.string().optional().describe("Payee name (optional, can differ from parent)"),
+  memo: z.string().optional().describe("Memo for this split (optional)"),
+});
+
 export const name = "update_transaction";
-export const description = "Updates an existing transaction in your YNAB budget. You can update any combination of fields including category, payee, memo, amount, date, cleared status, approved status, and flag color.";
+export const description = "Updates an existing transaction in your YNAB budget. You can update any combination of fields including category, payee, memo, amount, date, cleared status, approved status, and flag color. You can also convert a non-split transaction to a split by providing subtransactions. Note: Once a transaction is a split, its subtransactions cannot be modified via the API.";
 export const inputSchema = {
   budgetId: z.string().optional().describe("The id of the budget containing the transaction (optional, defaults to the budget set in the YNAB_BUDGET_ID environment variable)"),
   transactionId: z.string().describe("The id of the transaction to update"),
@@ -11,12 +19,21 @@ export const inputSchema = {
   amount: z.number().optional().describe("The new amount in dollars (e.g. -50.99 for an outflow, 100.00 for an inflow) (optional)"),
   payeeId: z.string().optional().describe("The id of the new payee (optional)"),
   payeeName: z.string().optional().describe("The name of the new payee - will create a new payee if it doesn't exist (optional)"),
-  categoryId: z.string().optional().describe("The new category id for the transaction (optional)"),
+  categoryId: z.string().optional().describe("The new category id for the transaction (optional, cannot be set if converting to split)"),
   memo: z.string().optional().describe("The new memo/note for the transaction (optional)"),
   cleared: z.boolean().optional().describe("Whether the transaction should be marked as cleared (optional)"),
   approved: z.boolean().optional().describe("Whether the transaction should be marked as approved (optional)"),
   flagColor: z.string().nullable().optional().describe("The flag color (red, orange, yellow, green, blue, purple) or null to remove the flag (optional)"),
+  subtransactions: z.array(subtransactionSchema).optional().describe("Convert a non-split transaction to a split by providing subtransactions. Amounts must sum to the transaction total. Once a transaction is a split, subtransactions cannot be modified via API."),
 };
+
+interface SubtransactionInput {
+  amount: number;
+  categoryId?: string;
+  payeeId?: string;
+  payeeName?: string;
+  memo?: string;
+}
 
 interface UpdateTransactionInput {
   budgetId?: string;
@@ -31,6 +48,7 @@ interface UpdateTransactionInput {
   cleared?: boolean;
   approved?: boolean;
   flagColor?: string | null;
+  subtransactions?: SubtransactionInput[];
 }
 
 function getBudgetId(inputBudgetId?: string): string {
@@ -56,10 +74,22 @@ export async function execute(input: UpdateTransactionInput, api: ynab.API) {
       input.memo !== undefined ||
       input.cleared !== undefined ||
       input.approved !== undefined ||
-      input.flagColor !== undefined;
+      input.flagColor !== undefined ||
+      input.subtransactions !== undefined;
 
     if (!hasUpdates) {
       throw new Error("No fields to update. Please provide at least one field to update.");
+    }
+
+    // Validate split transaction constraints
+    const isConvertingToSplit = input.subtransactions && input.subtransactions.length > 0;
+    if (isConvertingToSplit) {
+      if (input.categoryId !== undefined) {
+        throw new Error("categoryId cannot be set when converting to a split transaction. Categories are specified on each subtransaction.");
+      }
+      if (input.subtransactions!.length < 2) {
+        throw new Error("Split transactions must have at least 2 subtransactions.");
+      }
     }
 
     // Build the update object with only provided fields
@@ -107,6 +137,17 @@ export async function execute(input: UpdateTransactionInput, api: ynab.API) {
       transactionUpdate.flag_color = input.flagColor as ynab.TransactionFlagColor | null;
     }
 
+    // Build subtransactions array if converting to split
+    if (isConvertingToSplit) {
+      transactionUpdate.subtransactions = input.subtransactions!.map((st) => ({
+        amount: Math.round(st.amount * 1000),
+        category_id: st.categoryId,
+        payee_id: st.payeeId,
+        payee_name: st.payeeName,
+        memo: st.memo,
+      }));
+    }
+
     const transaction: ynab.PutTransactionWrapper = {
       transaction: transactionUpdate,
     };
@@ -125,14 +166,26 @@ export async function execute(input: UpdateTransactionInput, api: ynab.API) {
       content: [{ type: "text" as const, text: JSON.stringify({
         success: true,
         transactionId: response.data.transaction.id,
-        message: "Transaction updated successfully",
+        message: isConvertingToSplit
+          ? `Transaction converted to split with ${input.subtransactions!.length} subtransactions`
+          : "Transaction updated successfully",
       }, null, 2) }]
     };
   } catch (error) {
+    // Extract error details - YNAB API errors have nested structure
+    let errorMessage: string;
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === "object" && error !== null) {
+      errorMessage = JSON.stringify(error);
+    } else {
+      errorMessage = "Unknown error occurred";
+    }
+
     return {
       content: [{ type: "text" as const, text: JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred",
+        error: errorMessage,
       }, null, 2) }]
     };
   }

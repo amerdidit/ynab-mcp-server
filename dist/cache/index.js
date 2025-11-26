@@ -69,3 +69,36 @@ export function clearBudgetCache(budgetId) {
         fs.rmSync(cacheDir, { recursive: true });
     }
 }
+/**
+ * Read a global cache file (not budget-specific)
+ * Returns undefined if the file doesn't exist or is invalid
+ */
+export function readGlobalCache(filename) {
+    try {
+        const cacheDir = getBaseCacheDir();
+        if (!fs.existsSync(cacheDir)) {
+            fs.mkdirSync(cacheDir, { recursive: true });
+        }
+        const filePath = path.join(cacheDir, filename);
+        if (!fs.existsSync(filePath)) {
+            return undefined;
+        }
+        const content = fs.readFileSync(filePath, "utf-8");
+        return JSON.parse(content);
+    }
+    catch (error) {
+        console.error(`Error reading global cache file ${filename}:`, error);
+        return undefined;
+    }
+}
+/**
+ * Write a global cache file (not budget-specific)
+ */
+export function writeGlobalCache(filename, data) {
+    const cacheDir = getBaseCacheDir();
+    if (!fs.existsSync(cacheDir)) {
+        fs.mkdirSync(cacheDir, { recursive: true });
+    }
+    const filePath = path.join(cacheDir, filename);
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+}

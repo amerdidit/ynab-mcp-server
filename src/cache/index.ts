@@ -73,3 +73,37 @@ export function clearBudgetCache(budgetId: string): void {
     fs.rmSync(cacheDir, { recursive: true });
   }
 }
+
+/**
+ * Read a global cache file (not budget-specific)
+ * Returns undefined if the file doesn't exist or is invalid
+ */
+export function readGlobalCache<T>(filename: string): T | undefined {
+  try {
+    const cacheDir = getBaseCacheDir();
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+    const filePath = path.join(cacheDir, filename);
+    if (!fs.existsSync(filePath)) {
+      return undefined;
+    }
+    const content = fs.readFileSync(filePath, "utf-8");
+    return JSON.parse(content) as T;
+  } catch (error) {
+    console.error(`Error reading global cache file ${filename}:`, error);
+    return undefined;
+  }
+}
+
+/**
+ * Write a global cache file (not budget-specific)
+ */
+export function writeGlobalCache<T>(filename: string, data: T): void {
+  const cacheDir = getBaseCacheDir();
+  if (!fs.existsSync(cacheDir)) {
+    fs.mkdirSync(cacheDir, { recursive: true });
+  }
+  const filePath = path.join(cacheDir, filename);
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+}

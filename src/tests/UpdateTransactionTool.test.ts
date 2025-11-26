@@ -462,6 +462,249 @@ describe('UpdateTransactionTool', () => {
       expect(UpdateTransactionTool.inputSchema).toHaveProperty('cleared');
       expect(UpdateTransactionTool.inputSchema).toHaveProperty('approved');
       expect(UpdateTransactionTool.inputSchema).toHaveProperty('flagColor');
+      expect(UpdateTransactionTool.inputSchema).toHaveProperty('subtransactions');
+    });
+  });
+
+  describe('convert to split transaction', () => {
+    let mockApi: {
+      transactions: {
+        updateTransaction: Mock;
+      };
+    };
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+
+      mockApi = {
+        transactions: {
+          updateTransaction: vi.fn(),
+        },
+      };
+
+      (ynab.API as any).mockImplementation(() => mockApi);
+
+      process.env.YNAB_API_TOKEN = 'test-token';
+      process.env.YNAB_BUDGET_ID = 'test-budget-id';
+    });
+
+    const mockSplitTransaction = {
+      id: 'transaction-123',
+      account_id: 'account-123',
+      date: '2023-01-01',
+      amount: -75000,
+      payee_name: 'Target',
+      category_id: null,
+      memo: 'Split purchase',
+      approved: false,
+      cleared: ynab.TransactionClearedStatus.Uncleared,
+      subtransactions: [
+        { id: 'sub-1', amount: -50000, category_id: 'groceries-123' },
+        { id: 'sub-2', amount: -25000, category_id: 'household-123' },
+      ],
+    };
+
+    it('should convert a regular transaction to a split', async () => {
+      mockApi.transactions.updateTransaction.mockResolvedValue({
+        data: { transaction: mockSplitTransaction },
+      });
+
+      const result = await UpdateTransactionTool.execute(
+        {
+          transactionId: 'transaction-123',
+          subtransactions: [
+            { amount: -50.00, categoryId: 'groceries-123', memo: 'Food' },
+            { amount: -25.00, categoryId: 'household-123', memo: 'Cleaning' },
+          ],
+        },
+        mockApi as any
+      );
+
+      expect(mockApi.transactions.updateTransaction).toHaveBeenCalledWith(
+        'test-budget-id',
+        'transaction-123',
+        {
+          transaction: {
+            subtransactions: [
+              { amount: -50000, category_id: 'groceries-123', payee_id: undefined, payee_name: undefined, memo: 'Food' },
+              { amount: -25000, category_id: 'household-123', payee_id: undefined, payee_name: undefined, memo: 'Cleaning' },
+            ],
+          },
+        }
+      );
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.success).toBe(true);
+      expect(parsed.message).toContain('converted to split');
+      expect(parsed.message).toContain('2 subtransactions');
+    });
+
+    it('should convert to split with 3 subtransactions', async () => {
+      mockApi.transactions.updateTransaction.mockResolvedValue({
+        data: { transaction: mockSplitTransaction },
+      });
+
+      const result = await UpdateTransactionTool.execute(
+        {
+          transactionId: 'transaction-123',
+          subtransactions: [
+            { amount: -40.00, categoryId: 'cat-1' },
+            { amount: -35.00, categoryId: 'cat-2' },
+            { amount: -25.00, categoryId: 'cat-3' },
+          ],
+        },
+        mockApi as any
+      );
+
+      expect(mockApi.transactions.updateTransaction).toHaveBeenCalledWith(
+        'test-budget-id',
+        'transaction-123',
+        expect.objectContaining({
+          transaction: expect.objectContaining({
+            subtransactions: [
+              expect.objectContaining({ amount: -40000, category_id: 'cat-1' }),
+              expect.objectContaining({ amount: -35000, category_id: 'cat-2' }),
+              expect.objectContaining({ amount: -25000, category_id: 'cat-3' }),
+            ],
+          }),
+        })
+      );
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.success).toBe(true);
+      expect(parsed.message).toContain('3 subtransactions');
+    });
+
+    it('should reject converting to split when categoryId is also provided', async () => {
+      const result = await UpdateTransactionTool.execute(
+        {
+          transactionId: 'transaction-123',
+          categoryId: 'some-category',
+          subtransactions: [
+            { amount: -50.00, categoryId: 'groceries-123' },
+            { amount: -25.00, categoryId: 'household-123' },
+          ],
+        },
+        mockApi as any
+      );
+
+      expect(mockApi.transactions.updateTransaction).not.toHaveBeenCalled();
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.success).toBe(false);
+      expect(parsed.error).toContain('categoryId cannot be set when converting to a split');
+    });
+
+    it('should reject converting to split with only 1 subtransaction', async () => {
+      const result = await UpdateTransactionTool.execute(
+        {
+          transactionId: 'transaction-123',
+          subtransactions: [
+            { amount: -50.00, categoryId: 'groceries-123' },
+          ],
+        },
+        mockApi as any
+      );
+
+      expect(mockApi.transactions.updateTransaction).not.toHaveBeenCalled();
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.success).toBe(false);
+      expect(parsed.error).toContain('at least 2 subtransactions');
+    });
+
+    it('should allow converting to split along with other field updates', async () => {
+      mockApi.transactions.updateTransaction.mockResolvedValue({
+        data: { transaction: mockSplitTransaction },
+      });
+
+      await UpdateTransactionTool.execute(
+        {
+          transactionId: 'transaction-123',
+          memo: 'Updated split memo',
+          approved: true,
+          subtransactions: [
+            { amount: -50.00, categoryId: 'groceries-123' },
+            { amount: -25.00, categoryId: 'household-123' },
+          ],
+        },
+        mockApi as any
+      );
+
+      expect(mockApi.transactions.updateTransaction).toHaveBeenCalledWith(
+        'test-budget-id',
+        'transaction-123',
+        {
+          transaction: {
+            memo: 'Updated split memo',
+            approved: true,
+            subtransactions: [
+              { amount: -50000, category_id: 'groceries-123', payee_id: undefined, payee_name: undefined, memo: undefined },
+              { amount: -25000, category_id: 'household-123', payee_id: undefined, payee_name: undefined, memo: undefined },
+            ],
+          },
+        }
+      );
+    });
+
+    it('should allow subtransactions with different payees', async () => {
+      mockApi.transactions.updateTransaction.mockResolvedValue({
+        data: { transaction: mockSplitTransaction },
+      });
+
+      await UpdateTransactionTool.execute(
+        {
+          transactionId: 'transaction-123',
+          subtransactions: [
+            { amount: -60.00, categoryId: 'groceries-123', payeeName: 'Grocery Store' },
+            { amount: -40.00, categoryId: 'gas-123', payeeId: 'gas-station-id' },
+          ],
+        },
+        mockApi as any
+      );
+
+      expect(mockApi.transactions.updateTransaction).toHaveBeenCalledWith(
+        'test-budget-id',
+        'transaction-123',
+        expect.objectContaining({
+          transaction: expect.objectContaining({
+            subtransactions: [
+              { amount: -60000, category_id: 'groceries-123', payee_id: undefined, payee_name: 'Grocery Store', memo: undefined },
+              { amount: -40000, category_id: 'gas-123', payee_id: 'gas-station-id', payee_name: undefined, memo: undefined },
+            ],
+          }),
+        })
+      );
+    });
+
+    it('should convert subtransaction amounts to milliunits correctly', async () => {
+      mockApi.transactions.updateTransaction.mockResolvedValue({
+        data: { transaction: mockSplitTransaction },
+      });
+
+      await UpdateTransactionTool.execute(
+        {
+          transactionId: 'transaction-123',
+          subtransactions: [
+            { amount: -22.22, categoryId: 'cat-1' },
+            { amount: -11.11, categoryId: 'cat-2' },
+          ],
+        },
+        mockApi as any
+      );
+
+      expect(mockApi.transactions.updateTransaction).toHaveBeenCalledWith(
+        'test-budget-id',
+        'transaction-123',
+        expect.objectContaining({
+          transaction: expect.objectContaining({
+            subtransactions: [
+              expect.objectContaining({ amount: -22220 }),
+              expect.objectContaining({ amount: -11110 }),
+            ],
+          }),
+        })
+      );
     });
   });
 });

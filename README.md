@@ -53,7 +53,9 @@ Available tools:
 * BudgetSummary - provides a summary of categories that are underfunded and accounts that are low
 * GetUnapprovedTransactions - retrieve all unapproved transactions
 * CreateTransaction - creates a transaction for a specified budget and account.
+  * supports split transactions with multiple categories/payees
   * example prompt: `Add a transaction to my Ally account for $3.98 I spent at REI today`
+  * example split: `Add a $100 transaction split between Groceries ($60) and Household ($40)`
   * requires ListAccounts to be called first so we know the account id
 * ApproveTransaction - approves an existing transaction in your YNAB budget
   * requires a transaction ID to approve
@@ -68,7 +70,13 @@ Available tools:
   * example prompt: `Find all transactions at Amazon in the last 30 days`
 * UpdateTransaction - updates an existing transaction
   * can modify any combination of: category, payee, memo, amount, date, cleared status, approved status, flag color
+  * can convert a regular transaction to a split transaction
   * example prompt: `Change the category of that transaction to Groceries`
+  * example split: `Split that transaction between Dining Out ($30) and Groceries ($20)`
+* GetRateLimitStatus - shows current YNAB API rate limit usage
+  * YNAB allows 200 requests per hour in a rolling window
+  * tracks usage via X-Rate-Limit header from API responses
+  * shows warning levels: ok, warning (75%), critical (90%), exceeded (100%)
 
 ### Local Caching
 
@@ -83,6 +91,15 @@ Payee and category tools use local caching to work around two limitations:
 - Uses YNAB's `server_knowledge` for efficient delta syncs (only fetches changes since last sync)
 - Tools that read from cache auto-sync if cache is empty
 - Run `sync_payees` or `sync_categories` to manually refresh the cache
+
+### Rate Limit Tracking
+
+The server tracks YNAB API rate limit usage to help avoid hitting the 200 requests/hour limit:
+
+- Captures the `X-Rate-Limit` header from every YNAB API response
+- Persists count to `~/.ynab-mcp/cache/rate-limit.json` across sessions
+- Use `get_rate_limit_status` tool to check current usage
+- Shows staleness warning if data is >1 hour old (YNAB uses rolling window)
 
 Next:
 * Category Transfer - move money between categories
