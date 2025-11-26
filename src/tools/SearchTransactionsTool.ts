@@ -30,6 +30,7 @@ export const inputSchema = {
   cleared: z.enum(["cleared", "uncleared", "reconciled"]).optional().describe("Filter by cleared status"),
   approved: z.boolean().optional().describe("Filter by approval status (true=approved, false=unapproved)"),
   flagColor: z.enum(["red", "orange", "yellow", "green", "blue", "purple"]).optional().describe("Filter by flag color"),
+  excludeTransfers: z.boolean().optional().describe("Exclude transfer transactions (default: false). Useful when searching for uncategorized transactions since transfers don't have categories."),
   limit: z.number().optional().describe("Max transactions to return (default: 100)"),
 };
 
@@ -47,6 +48,7 @@ interface SearchTransactionsInput {
   cleared?: "cleared" | "uncleared" | "reconciled";
   approved?: boolean;
   flagColor?: "red" | "orange" | "yellow" | "green" | "blue" | "purple";
+  excludeTransfers?: boolean;
   limit?: number;
 }
 
@@ -152,6 +154,11 @@ export async function execute(input: SearchTransactionsInput, api: ynab.API) {
       transactions = transactions.filter((t) => t.flag_color === input.flagColor);
     }
 
+    // excludeTransfers filter
+    if (input.excludeTransfers) {
+      transactions = transactions.filter((t) => !t.transfer_account_id);
+    }
+
     // Apply limit
     const limitedTransactions = transactions.slice(0, limit);
 
@@ -170,6 +177,7 @@ export async function execute(input: SearchTransactionsInput, api: ynab.API) {
     if (input.cleared) filtersApplied.cleared = input.cleared;
     if (input.approved !== undefined) filtersApplied.approved = input.approved;
     if (input.flagColor) filtersApplied.flag_color = input.flagColor;
+    if (input.excludeTransfers) filtersApplied.exclude_transfers = input.excludeTransfers;
 
     // Transform transactions to response format
     const formattedTransactions = limitedTransactions.map((t) => ({

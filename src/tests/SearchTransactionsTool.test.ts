@@ -439,6 +439,114 @@ describe('SearchTransactionsTool', () => {
       expect(parsed.transactions[0].flag_color).toBe('red');
     });
 
+    it('should exclude transfers when excludeTransfers is true', async () => {
+      const transactionsWithTransfer = [
+        {
+          id: 'regular-1',
+          date: '2024-01-15',
+          amount: -50000,
+          memo: 'Regular purchase',
+          approved: true,
+          cleared: 'cleared',
+          account_id: 'account-1',
+          account_name: 'Checking',
+          payee_id: 'payee-1',
+          payee_name: 'Store',
+          category_id: null,
+          category_name: null,
+          flag_color: null,
+          transfer_account_id: null,
+          deleted: false,
+          subtransactions: [],
+        },
+        {
+          id: 'transfer-1',
+          date: '2024-01-15',
+          amount: -100000,
+          memo: 'Transfer to Savings',
+          approved: true,
+          cleared: 'cleared',
+          account_id: 'account-1',
+          account_name: 'Checking',
+          payee_id: 'transfer-payee',
+          payee_name: 'Transfer : Savings',
+          category_id: null,
+          category_name: null,
+          flag_color: null,
+          transfer_account_id: 'savings-account-id',
+          deleted: false,
+          subtransactions: [],
+        },
+      ];
+
+      mockApi.transactions.getTransactions.mockResolvedValue({
+        data: { transactions: transactionsWithTransfer },
+      });
+
+      const result = await SearchTransactionsTool.execute(
+        { sinceDate: '2024-01-01', excludeTransfers: true },
+        mockApi as any
+      );
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.transaction_count).toBe(1);
+      expect(parsed.transactions[0].id).toBe('regular-1');
+      expect(parsed.filters_applied.exclude_transfers).toBe(true);
+    });
+
+    it('should include transfers by default', async () => {
+      const transactionsWithTransfer = [
+        {
+          id: 'regular-1',
+          date: '2024-01-15',
+          amount: -50000,
+          memo: 'Regular purchase',
+          approved: true,
+          cleared: 'cleared',
+          account_id: 'account-1',
+          account_name: 'Checking',
+          payee_id: 'payee-1',
+          payee_name: 'Store',
+          category_id: null,
+          category_name: null,
+          flag_color: null,
+          transfer_account_id: null,
+          deleted: false,
+          subtransactions: [],
+        },
+        {
+          id: 'transfer-1',
+          date: '2024-01-15',
+          amount: -100000,
+          memo: 'Transfer to Savings',
+          approved: true,
+          cleared: 'cleared',
+          account_id: 'account-1',
+          account_name: 'Checking',
+          payee_id: 'transfer-payee',
+          payee_name: 'Transfer : Savings',
+          category_id: null,
+          category_name: null,
+          flag_color: null,
+          transfer_account_id: 'savings-account-id',
+          deleted: false,
+          subtransactions: [],
+        },
+      ];
+
+      mockApi.transactions.getTransactions.mockResolvedValue({
+        data: { transactions: transactionsWithTransfer },
+      });
+
+      const result = await SearchTransactionsTool.execute(
+        { sinceDate: '2024-01-01' },
+        mockApi as any
+      );
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.transaction_count).toBe(2);
+    });
+
     it('should apply multiple filters together', async () => {
       mockApi.transactions.getTransactions.mockResolvedValue({
         data: { transactions: mockTransactionsData },
