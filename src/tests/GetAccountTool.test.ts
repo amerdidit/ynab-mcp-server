@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
 import * as ynab from 'ynab';
-import * as FetchAccountTool from '../tools/FetchAccountTool';
+import * as GetAccountTool from '../tools/GetAccountTool';
 
 vi.mock('ynab');
 
-describe('FetchAccountTool', () => {
+describe('GetAccountTool', () => {
   let mockApi: {
     accounts: {
       getAccountById: Mock;
@@ -42,12 +42,12 @@ describe('FetchAccountTool', () => {
       direct_import_in_error: false,
     };
 
-    it('should successfully fetch an account by ID', async () => {
+    it('should successfully get an account by ID', async () => {
       mockApi.accounts.getAccountById.mockResolvedValue({
         data: { account: mockAccountData },
       });
 
-      const result = await FetchAccountTool.execute({ accountId: 'account-1' }, mockApi as any);
+      const result = await GetAccountTool.execute({ accountId: 'account-1' }, mockApi as any);
 
       expect(mockApi.accounts.getAccountById).toHaveBeenCalledWith('default-budget-id', 'account-1');
 
@@ -66,7 +66,7 @@ describe('FetchAccountTool', () => {
         data: { account: mockAccountData },
       });
 
-      await FetchAccountTool.execute({ accountId: 'account-1', budgetId: 'custom-budget-id' }, mockApi as any);
+      await GetAccountTool.execute({ accountId: 'account-1', budgetId: 'custom-budget-id' }, mockApi as any);
 
       expect(mockApi.accounts.getAccountById).toHaveBeenCalledWith('custom-budget-id', 'account-1');
     });
@@ -74,17 +74,17 @@ describe('FetchAccountTool', () => {
     it('should return error when no budget ID is available', async () => {
       delete process.env.YNAB_BUDGET_ID;
 
-      const result = await FetchAccountTool.execute({ accountId: 'account-1' }, mockApi as any);
+      const result = await GetAccountTool.execute({ accountId: 'account-1' }, mockApi as any);
 
-      expect(result.content[0].text).toContain('Error fetching account:');
+      expect(result.content[0].text).toContain('Error getting account:');
       expect(result.content[0].text).toContain('No budget ID provided');
       expect(mockApi.accounts.getAccountById).not.toHaveBeenCalled();
     });
 
     it('should return error when no account ID is provided', async () => {
-      const result = await FetchAccountTool.execute({ accountId: '' }, mockApi as any);
+      const result = await GetAccountTool.execute({ accountId: '' }, mockApi as any);
 
-      expect(result.content[0].text).toContain('Error fetching account:');
+      expect(result.content[0].text).toContain('Error getting account:');
       expect(result.content[0].text).toContain('Account ID is required');
       expect(mockApi.accounts.getAccountById).not.toHaveBeenCalled();
     });
@@ -93,9 +93,9 @@ describe('FetchAccountTool', () => {
       const apiError = new Error('Account not found');
       mockApi.accounts.getAccountById.mockRejectedValue(apiError);
 
-      const result = await FetchAccountTool.execute({ accountId: 'invalid-id' }, mockApi as any);
+      const result = await GetAccountTool.execute({ accountId: 'invalid-id' }, mockApi as any);
 
-      expect(result.content[0].text).toContain('Error fetching account:');
+      expect(result.content[0].text).toContain('Error getting account:');
       expect(result.content[0].text).toContain('Account not found');
     });
 
@@ -111,7 +111,7 @@ describe('FetchAccountTool', () => {
         data: { account: accountWithPrecision },
       });
 
-      const result = await FetchAccountTool.execute({ accountId: 'account-1' }, mockApi as any);
+      const result = await GetAccountTool.execute({ accountId: 'account-1' }, mockApi as any);
 
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.balance).toBe(123.45);
@@ -124,7 +124,7 @@ describe('FetchAccountTool', () => {
         data: { account: mockAccountData },
       });
 
-      const result = await FetchAccountTool.execute({ accountId: 'account-1' }, mockApi as any);
+      const result = await GetAccountTool.execute({ accountId: 'account-1' }, mockApi as any);
 
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed).toHaveProperty('id');
@@ -151,7 +151,7 @@ describe('FetchAccountTool', () => {
         data: { account: closedAccount },
       });
 
-      const result = await FetchAccountTool.execute({ accountId: 'account-1' }, mockApi as any);
+      const result = await GetAccountTool.execute({ accountId: 'account-1' }, mockApi as any);
 
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.closed).toBe(true);
@@ -170,7 +170,7 @@ describe('FetchAccountTool', () => {
         data: { account: creditCardAccount },
       });
 
-      const result = await FetchAccountTool.execute({ accountId: 'account-1' }, mockApi as any);
+      const result = await GetAccountTool.execute({ accountId: 'account-1' }, mockApi as any);
 
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.balance).toBe(-250);
@@ -181,20 +181,20 @@ describe('FetchAccountTool', () => {
 
   describe('tool configuration', () => {
     it('should have correct name', () => {
-      expect(FetchAccountTool.name).toBe('fetch_account');
+      expect(GetAccountTool.name).toBe('get_account');
     });
 
     it('should have correct description', () => {
-      expect(FetchAccountTool.description).toContain('single account');
-      expect(FetchAccountTool.description).toContain('by ID');
+      expect(GetAccountTool.description).toContain('single account');
+      expect(GetAccountTool.description).toContain('by ID');
     });
 
     it('should have required accountId in schema', () => {
-      expect(FetchAccountTool.inputSchema.accountId).toBeDefined();
+      expect(GetAccountTool.inputSchema.accountId).toBeDefined();
     });
 
     it('should have optional budgetId in schema', () => {
-      expect(FetchAccountTool.inputSchema.budgetId).toBeDefined();
+      expect(GetAccountTool.inputSchema.budgetId).toBeDefined();
     });
   });
 });

@@ -40,7 +40,7 @@ tool first, this prompt should happen asking you to set your default budget.
 Available tools:
 * ListBudgets - lists available budgets on your account
 * ListAccounts - lists all accounts with IDs, names, types, and balances
-* FetchAccount - gets a single account by ID with detailed information
+* GetAccount - gets a single account by ID with detailed information
 * ListCategories - lists all categories organized by category group with budget amounts
 * BudgetSummary - provides a summary of categories that are underfunded and accounts that are low
 * GetUnapprovedTransactions - retrieve all unapproved transactions

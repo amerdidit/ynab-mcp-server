@@ -90,3 +90,22 @@ describe('MyTool', () => {
 All tools return: `{ content: [{ type: "text" as const, text: "..." }] }`
 
 YNAB amounts are in milliunits - divide by 1000 for dollars.
+
+## Tool Naming Conventions
+
+MCP tools are designed for LLMs, not developers. Use domain language that matches how users naturally talk about YNAB operations.
+
+### Naming Patterns
+
+| Operation | Pattern | Examples |
+|-----------|---------|----------|
+| Get all items | `list_*` | `list_accounts`, `list_categories`, `list_budgets` |
+| Get single item | `get_*` | `get_account`, `get_transaction` |
+| Domain actions | Use YNAB verbs | `approve_transaction`, `assign_to_category`, `reconcile_account` |
+
+### Guidelines
+
+1. **Use domain verbs for actions** - `approve_transaction` is clearer than `update_transaction` because YNAB users "approve" transactions
+2. **Match YNAB terminology** - Use words like "assign", "reconcile", "categorize" that YNAB users already know
+3. **Keep reads generic** - `list_*` and `get_*` are standard patterns for read operations
+4. **Be specific in descriptions** - Tool descriptions should explain exactly what the tool does for the LLM

@@ -1,14 +1,14 @@
 import { z } from "zod";
 import * as ynab from "ynab";
 
-export const name = "fetch_account";
-export const description = "Fetches a single account by ID from a YNAB budget with detailed information including balance, type, and status.";
+export const name = "get_account";
+export const description = "Gets a single account by ID from a YNAB budget with detailed information including balance, type, and status.";
 export const inputSchema = {
-  accountId: z.string().describe("The ID of the account to fetch"),
+  accountId: z.string().describe("The ID of the account to get"),
   budgetId: z.string().optional().describe("Budget ID (optional, defaults to YNAB_BUDGET_ID env var)"),
 };
 
-interface FetchAccountInput {
+interface GetAccountInput {
   accountId: string;
   budgetId?: string;
 }
@@ -21,7 +21,7 @@ function getBudgetId(inputBudgetId?: string): string {
   return budgetId;
 }
 
-export async function execute(input: FetchAccountInput, api: ynab.API) {
+export async function execute(input: GetAccountInput, api: ynab.API) {
   try {
     const budgetId = getBudgetId(input.budgetId);
     const accountId = input.accountId;
@@ -30,7 +30,7 @@ export async function execute(input: FetchAccountInput, api: ynab.API) {
       throw new Error("Account ID is required.");
     }
 
-    console.log(`Fetching account ${accountId} for budget ${budgetId}`);
+    console.log(`Getting account ${accountId} for budget ${budgetId}`);
     const accountResponse = await api.accounts.getAccountById(budgetId, accountId);
     const account = accountResponse.data.account;
 
@@ -53,9 +53,9 @@ export async function execute(input: FetchAccountInput, api: ynab.API) {
       content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }]
     };
   } catch (error: unknown) {
-    console.error(`Error fetching account: ${JSON.stringify(error)}`);
+    console.error(`Error getting account: ${JSON.stringify(error)}`);
     return {
-      content: [{ type: "text" as const, text: `Error fetching account: ${error instanceof Error ? error.message : JSON.stringify(error)}` }]
+      content: [{ type: "text" as const, text: `Error getting account: ${error instanceof Error ? error.message : JSON.stringify(error)}` }]
     };
   }
 }

@@ -1,8 +1,8 @@
 import { z } from "zod";
-export const name = "fetch_account";
-export const description = "Fetches a single account by ID from a YNAB budget with detailed information including balance, type, and status.";
+export const name = "get_account";
+export const description = "Gets a single account by ID from a YNAB budget with detailed information including balance, type, and status.";
 export const inputSchema = {
-    accountId: z.string().describe("The ID of the account to fetch"),
+    accountId: z.string().describe("The ID of the account to get"),
     budgetId: z.string().optional().describe("Budget ID (optional, defaults to YNAB_BUDGET_ID env var)"),
 };
 function getBudgetId(inputBudgetId) {
@@ -19,7 +19,7 @@ export async function execute(input, api) {
         if (!accountId) {
             throw new Error("Account ID is required.");
         }
-        console.log(`Fetching account ${accountId} for budget ${budgetId}`);
+        console.log(`Getting account ${accountId} for budget ${budgetId}`);
         const accountResponse = await api.accounts.getAccountById(budgetId, accountId);
         const account = accountResponse.data.account;
         const result = {
@@ -41,9 +41,9 @@ export async function execute(input, api) {
         };
     }
     catch (error) {
-        console.error(`Error fetching account: ${JSON.stringify(error)}`);
+        console.error(`Error getting account: ${JSON.stringify(error)}`);
         return {
-            content: [{ type: "text", text: `Error fetching account: ${error instanceof Error ? error.message : JSON.stringify(error)}` }]
+            content: [{ type: "text", text: `Error getting account: ${error instanceof Error ? error.message : JSON.stringify(error)}` }]
         };
     }
 }
