@@ -2,7 +2,7 @@
 
 ## High Priority (Essential for daily operations)
 
-- [ ] **List Accounts** - Get all accounts with IDs (needed for `create_transaction`)
+- [x] **List Accounts** - Get all accounts with IDs (needed for `create_transaction`)
 - [ ] **List Categories** - Get all categories with IDs (needed for categorizing transactions)
 - [ ] **List Payees** - Get all payees with IDs (needed for `create_transaction`)
 - [ ] **Update Transaction** - Edit existing transactions (category, payee, memo, amount, etc.)
