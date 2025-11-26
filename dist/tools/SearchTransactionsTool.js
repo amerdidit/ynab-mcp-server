@@ -27,7 +27,7 @@ export const inputSchema = {
     cleared: z.enum(["cleared", "uncleared", "reconciled"]).optional().describe("Filter by cleared status"),
     approved: z.boolean().optional().describe("Filter by approval status (true=approved, false=unapproved)"),
     flagColor: z.enum(["red", "orange", "yellow", "green", "blue", "purple"]).optional().describe("Filter by flag color"),
-    excludeTransfers: z.boolean().optional().describe("Exclude transfer transactions (default: false). Useful when searching for uncategorized transactions since transfers don't have categories."),
+    excludeBudgetTransfers: z.boolean().optional().describe("Exclude transfers between on-budget accounts (default: false). These don't need categories since money just moves between accounts. Transfers to/from tracking accounts are kept since they represent real income/expenses."),
     limit: z.number().optional().describe("Max transactions to return (default: 100)"),
 };
 function getBudgetId(inputBudgetId) {
@@ -48,6 +48,12 @@ export async function execute(input, api) {
         // Use the API's native type filter for uncategorized transactions
         const response = await api.transactions.getTransactions(budgetId, input.sinceDate, isUncategorizedFilter ? "uncategorized" : undefined);
         let transactions = response.data.transactions.filter((t) => !t.deleted);
+        // Build account on_budget lookup if needed for transfer filtering
+        let accountOnBudgetMap = null;
+        if (input.excludeBudgetTransfers) {
+            const accountsResponse = await api.accounts.getAccounts(budgetId);
+            accountOnBudgetMap = new Map(accountsResponse.data.accounts.map((a) => [a.id, a.on_budget]));
+        }
         // Apply client-side filters
         // beforeDate filter (exclusive)
         if (input.beforeDate) {
@@ -107,9 +113,19 @@ export async function execute(input, api) {
         if (input.flagColor) {
             transactions = transactions.filter((t) => t.flag_color === input.flagColor);
         }
-        // excludeTransfers filter
-        if (input.excludeTransfers) {
-            transactions = transactions.filter((t) => !t.transfer_account_id);
+        // excludeBudgetTransfers filter - exclude transfers where BOTH accounts are on-budget
+        if (input.excludeBudgetTransfers && accountOnBudgetMap) {
+            transactions = transactions.filter((t) => {
+                // Not a transfer - keep it
+                if (!t.transfer_account_id)
+                    return true;
+                // Check if both source and destination are on-budget
+                const sourceOnBudget = accountOnBudgetMap.get(t.account_id) ?? false;
+                const destOnBudget = accountOnBudgetMap.get(t.transfer_account_id) ?? false;
+                // Exclude only if BOTH are on-budget (money moving within budget)
+                // Keep transfers to/from tracking accounts (they need categories)
+                return !(sourceOnBudget && destOnBudget);
+            });
         }
         // Apply limit
         const limitedTransactions = transactions.slice(0, limit);
@@ -139,8 +155,8 @@ export async function execute(input, api) {
             filtersApplied.approved = input.approved;
         if (input.flagColor)
             filtersApplied.flag_color = input.flagColor;
-        if (input.excludeTransfers)
-            filtersApplied.exclude_transfers = input.excludeTransfers;
+        if (input.excludeBudgetTransfers)
+            filtersApplied.exclude_budget_transfers = input.excludeBudgetTransfers;
         // Transform transactions to response format
         const formattedTransactions = limitedTransactions.map((t) => ({
             id: t.id,

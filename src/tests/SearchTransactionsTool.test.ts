@@ -9,6 +9,9 @@ describe('SearchTransactionsTool', () => {
     transactions: {
       getTransactions: Mock;
     };
+    accounts: {
+      getAccounts: Mock;
+    };
   };
 
   beforeEach(() => {
@@ -17,6 +20,9 @@ describe('SearchTransactionsTool', () => {
     mockApi = {
       transactions: {
         getTransactions: vi.fn(),
+      },
+      accounts: {
+        getAccounts: vi.fn(),
       },
     };
 
@@ -439,8 +445,8 @@ describe('SearchTransactionsTool', () => {
       expect(parsed.transactions[0].flag_color).toBe('red');
     });
 
-    it('should exclude transfers when excludeTransfers is true', async () => {
-      const transactionsWithTransfer = [
+    it('should exclude budget-to-budget transfers when excludeBudgetTransfers is true', async () => {
+      const transactionsWithTransfers = [
         {
           id: 'regular-1',
           date: '2024-01-15',
@@ -448,7 +454,7 @@ describe('SearchTransactionsTool', () => {
           memo: 'Regular purchase',
           approved: true,
           cleared: 'cleared',
-          account_id: 'account-1',
+          account_id: 'checking-id',
           account_name: 'Checking',
           payee_id: 'payee-1',
           payee_name: 'Store',
@@ -460,41 +466,70 @@ describe('SearchTransactionsTool', () => {
           subtransactions: [],
         },
         {
-          id: 'transfer-1',
+          id: 'budget-transfer',
           date: '2024-01-15',
           amount: -100000,
           memo: 'Transfer to Savings',
           approved: true,
           cleared: 'cleared',
-          account_id: 'account-1',
+          account_id: 'checking-id',
           account_name: 'Checking',
           payee_id: 'transfer-payee',
           payee_name: 'Transfer : Savings',
           category_id: null,
           category_name: null,
           flag_color: null,
-          transfer_account_id: 'savings-account-id',
+          transfer_account_id: 'savings-id',
+          deleted: false,
+          subtransactions: [],
+        },
+        {
+          id: 'tracking-transfer',
+          date: '2024-01-15',
+          amount: -50000,
+          memo: 'Investment contribution',
+          approved: true,
+          cleared: 'cleared',
+          account_id: 'checking-id',
+          account_name: 'Checking',
+          payee_id: 'investment-payee',
+          payee_name: 'Transfer : Investment',
+          category_id: null,
+          category_name: null,
+          flag_color: null,
+          transfer_account_id: 'investment-id',
           deleted: false,
           subtransactions: [],
         },
       ];
 
+      const mockAccounts = [
+        { id: 'checking-id', name: 'Checking', on_budget: true },
+        { id: 'savings-id', name: 'Savings', on_budget: true },
+        { id: 'investment-id', name: 'Investment', on_budget: false }, // tracking account
+      ];
+
       mockApi.transactions.getTransactions.mockResolvedValue({
-        data: { transactions: transactionsWithTransfer },
+        data: { transactions: transactionsWithTransfers },
+      });
+      mockApi.accounts.getAccounts.mockResolvedValue({
+        data: { accounts: mockAccounts },
       });
 
       const result = await SearchTransactionsTool.execute(
-        { sinceDate: '2024-01-01', excludeTransfers: true },
+        { sinceDate: '2024-01-01', excludeBudgetTransfers: true },
         mockApi as any
       );
 
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.transaction_count).toBe(1);
-      expect(parsed.transactions[0].id).toBe('regular-1');
-      expect(parsed.filters_applied.exclude_transfers).toBe(true);
+      expect(parsed.transaction_count).toBe(2);
+      expect(parsed.transactions.map((t: any) => t.id)).toContain('regular-1');
+      expect(parsed.transactions.map((t: any) => t.id)).toContain('tracking-transfer');
+      expect(parsed.transactions.map((t: any) => t.id)).not.toContain('budget-transfer');
+      expect(parsed.filters_applied.exclude_budget_transfers).toBe(true);
     });
 
-    it('should include transfers by default', async () => {
+    it('should include all transfers by default', async () => {
       const transactionsWithTransfer = [
         {
           id: 'regular-1',
@@ -503,7 +538,7 @@ describe('SearchTransactionsTool', () => {
           memo: 'Regular purchase',
           approved: true,
           cleared: 'cleared',
-          account_id: 'account-1',
+          account_id: 'checking-id',
           account_name: 'Checking',
           payee_id: 'payee-1',
           payee_name: 'Store',
@@ -521,14 +556,14 @@ describe('SearchTransactionsTool', () => {
           memo: 'Transfer to Savings',
           approved: true,
           cleared: 'cleared',
-          account_id: 'account-1',
+          account_id: 'checking-id',
           account_name: 'Checking',
           payee_id: 'transfer-payee',
           payee_name: 'Transfer : Savings',
           category_id: null,
           category_name: null,
           flag_color: null,
-          transfer_account_id: 'savings-account-id',
+          transfer_account_id: 'savings-id',
           deleted: false,
           subtransactions: [],
         },
@@ -545,6 +580,52 @@ describe('SearchTransactionsTool', () => {
 
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.transaction_count).toBe(2);
+      // Should NOT call getAccounts when filter is not used
+      expect(mockApi.accounts.getAccounts).not.toHaveBeenCalled();
+    });
+
+    it('should keep transfers from tracking to budget accounts', async () => {
+      const transactionsWithTransfers = [
+        {
+          id: 'tracking-to-budget',
+          date: '2024-01-15',
+          amount: 50000,
+          memo: 'Dividend income',
+          approved: true,
+          cleared: 'cleared',
+          account_id: 'investment-id', // tracking account
+          account_name: 'Investment',
+          payee_id: 'transfer-payee',
+          payee_name: 'Transfer : Checking',
+          category_id: null,
+          category_name: null,
+          flag_color: null,
+          transfer_account_id: 'checking-id', // budget account
+          deleted: false,
+          subtransactions: [],
+        },
+      ];
+
+      const mockAccounts = [
+        { id: 'checking-id', name: 'Checking', on_budget: true },
+        { id: 'investment-id', name: 'Investment', on_budget: false },
+      ];
+
+      mockApi.transactions.getTransactions.mockResolvedValue({
+        data: { transactions: transactionsWithTransfers },
+      });
+      mockApi.accounts.getAccounts.mockResolvedValue({
+        data: { accounts: mockAccounts },
+      });
+
+      const result = await SearchTransactionsTool.execute(
+        { sinceDate: '2024-01-01', excludeBudgetTransfers: true },
+        mockApi as any
+      );
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.transaction_count).toBe(1);
+      expect(parsed.transactions[0].id).toBe('tracking-to-budget');
     });
 
     it('should apply multiple filters together', async () => {
