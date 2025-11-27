@@ -67,7 +67,10 @@ Available tools:
 * SearchTransactions - searches transactions with flexible filtering options
   * filter by date range, amount range, payee, category, memo text, cleared/approved status, flag color
   * supports uncategorized transaction filtering
+  * `excludeBudgetTransfers` - exclude transfers between on-budget accounts
+  * `excludeTrackingAccounts` - exclude transactions from tracking (off-budget) accounts like investments, assets, loans
   * example prompt: `Find all transactions at Amazon in the last 30 days`
+  * example prompt: `Find uncategorized transactions excluding tracking accounts`
 * UpdateTransaction - updates an existing transaction
   * can modify any combination of: category, payee, memo, amount, date, cleared status, approved status, flag color
   * can convert a regular transaction to a split transaction

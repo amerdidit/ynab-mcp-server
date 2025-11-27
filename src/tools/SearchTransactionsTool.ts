@@ -31,6 +31,7 @@ export const inputSchema = {
   approved: z.boolean().optional().describe("Filter by approval status (true=approved, false=unapproved)"),
   flagColor: z.enum(["red", "orange", "yellow", "green", "blue", "purple"]).optional().describe("Filter by flag color"),
   excludeBudgetTransfers: z.boolean().optional().describe("Exclude transfers between on-budget accounts (default: false). These don't need categories since money just moves between accounts. Transfers to/from tracking accounts are kept since they represent real income/expenses."),
+  excludeTrackingAccounts: z.boolean().optional().describe("Exclude transactions from tracking (off-budget) accounts (default: false). Useful when searching for uncategorized transactions that need attention, since tracking accounts (investments, assets, loans) don't require categories."),
   limit: z.number().optional().describe("Max transactions to return (default: 100)"),
 };
 
@@ -49,6 +50,7 @@ interface SearchTransactionsInput {
   approved?: boolean;
   flagColor?: "red" | "orange" | "yellow" | "green" | "blue" | "purple";
   excludeBudgetTransfers?: boolean;
+  excludeTrackingAccounts?: boolean;
   limit?: number;
 }
 
@@ -80,9 +82,9 @@ export async function execute(input: SearchTransactionsInput, api: ynab.API) {
 
     let transactions = response.data.transactions.filter((t) => !t.deleted);
 
-    // Build account on_budget lookup if needed for transfer filtering
+    // Build account on_budget lookup if needed for transfer or tracking account filtering
     let accountOnBudgetMap: Map<string, boolean> | null = null;
-    if (input.excludeBudgetTransfers) {
+    if (input.excludeBudgetTransfers || input.excludeTrackingAccounts) {
       const accountsResponse = await api.accounts.getAccounts(budgetId);
       accountOnBudgetMap = new Map(
         accountsResponse.data.accounts.map((a) => [a.id, a.on_budget])
@@ -179,6 +181,14 @@ export async function execute(input: SearchTransactionsInput, api: ynab.API) {
       });
     }
 
+    // excludeTrackingAccounts filter - exclude transactions from off-budget accounts
+    if (input.excludeTrackingAccounts && accountOnBudgetMap) {
+      transactions = transactions.filter((t) => {
+        const isOnBudget = accountOnBudgetMap!.get(t.account_id) ?? true;
+        return isOnBudget;
+      });
+    }
+
     // Apply limit
     const limitedTransactions = transactions.slice(0, limit);
 
@@ -198,6 +208,7 @@ export async function execute(input: SearchTransactionsInput, api: ynab.API) {
     if (input.approved !== undefined) filtersApplied.approved = input.approved;
     if (input.flagColor) filtersApplied.flag_color = input.flagColor;
     if (input.excludeBudgetTransfers) filtersApplied.exclude_budget_transfers = input.excludeBudgetTransfers;
+    if (input.excludeTrackingAccounts) filtersApplied.exclude_tracking_accounts = input.excludeTrackingAccounts;
 
     // Transform transactions to response format
     const formattedTransactions = limitedTransactions.map((t) => ({

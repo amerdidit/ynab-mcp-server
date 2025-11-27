@@ -584,6 +584,230 @@ describe('SearchTransactionsTool', () => {
       expect(mockApi.accounts.getAccounts).not.toHaveBeenCalled();
     });
 
+    it('should exclude tracking account transactions when excludeTrackingAccounts is true', async () => {
+      const transactionsFromBothAccountTypes = [
+        {
+          id: 'budget-account-transaction',
+          date: '2024-01-15',
+          amount: -50000,
+          memo: 'Regular purchase',
+          approved: true,
+          cleared: 'cleared',
+          account_id: 'checking-id',
+          account_name: 'Checking',
+          payee_id: 'payee-1',
+          payee_name: 'Store',
+          category_id: null,
+          category_name: null,
+          flag_color: null,
+          transfer_account_id: null,
+          deleted: false,
+          subtransactions: [],
+        },
+        {
+          id: 'tracking-account-transaction',
+          date: '2024-01-15',
+          amount: 1000000,
+          memo: 'Reconciliation Balance Adjustment',
+          approved: true,
+          cleared: 'reconciled',
+          account_id: 'investment-id',
+          account_name: 'Investment',
+          payee_id: 'reconcile-payee',
+          payee_name: 'Reconciliation Balance Adjustment',
+          category_id: null,
+          category_name: null,
+          flag_color: null,
+          transfer_account_id: null,
+          deleted: false,
+          subtransactions: [],
+        },
+        {
+          id: 'another-tracking-transaction',
+          date: '2024-01-16',
+          amount: 50000,
+          memo: 'Starting Balance',
+          approved: true,
+          cleared: 'cleared',
+          account_id: 'gold-id',
+          account_name: 'Gold 1Oz',
+          payee_id: 'starting-balance-payee',
+          payee_name: 'Starting Balance',
+          category_id: null,
+          category_name: null,
+          flag_color: null,
+          transfer_account_id: null,
+          deleted: false,
+          subtransactions: [],
+        },
+      ];
+
+      const mockAccounts = [
+        { id: 'checking-id', name: 'Checking', on_budget: true },
+        { id: 'investment-id', name: 'Investment', on_budget: false },
+        { id: 'gold-id', name: 'Gold 1Oz', on_budget: false },
+      ];
+
+      mockApi.transactions.getTransactions.mockResolvedValue({
+        data: { transactions: transactionsFromBothAccountTypes },
+      });
+      mockApi.accounts.getAccounts.mockResolvedValue({
+        data: { accounts: mockAccounts },
+      });
+
+      const result = await SearchTransactionsTool.execute(
+        { sinceDate: '2024-01-01', excludeTrackingAccounts: true },
+        mockApi as any
+      );
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.transaction_count).toBe(1);
+      expect(parsed.transactions[0].id).toBe('budget-account-transaction');
+      expect(parsed.transactions.map((t: any) => t.id)).not.toContain('tracking-account-transaction');
+      expect(parsed.transactions.map((t: any) => t.id)).not.toContain('another-tracking-transaction');
+      expect(parsed.filters_applied.exclude_tracking_accounts).toBe(true);
+    });
+
+    it('should include tracking account transactions by default', async () => {
+      const transactionsFromBothAccountTypes = [
+        {
+          id: 'budget-account-transaction',
+          date: '2024-01-15',
+          amount: -50000,
+          memo: 'Regular purchase',
+          approved: true,
+          cleared: 'cleared',
+          account_id: 'checking-id',
+          account_name: 'Checking',
+          payee_id: 'payee-1',
+          payee_name: 'Store',
+          category_id: null,
+          category_name: null,
+          flag_color: null,
+          transfer_account_id: null,
+          deleted: false,
+          subtransactions: [],
+        },
+        {
+          id: 'tracking-account-transaction',
+          date: '2024-01-15',
+          amount: 1000000,
+          memo: 'Reconciliation Balance Adjustment',
+          approved: true,
+          cleared: 'reconciled',
+          account_id: 'investment-id',
+          account_name: 'Investment',
+          payee_id: 'reconcile-payee',
+          payee_name: 'Reconciliation Balance Adjustment',
+          category_id: null,
+          category_name: null,
+          flag_color: null,
+          transfer_account_id: null,
+          deleted: false,
+          subtransactions: [],
+        },
+      ];
+
+      mockApi.transactions.getTransactions.mockResolvedValue({
+        data: { transactions: transactionsFromBothAccountTypes },
+      });
+
+      const result = await SearchTransactionsTool.execute(
+        { sinceDate: '2024-01-01' },
+        mockApi as any
+      );
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.transaction_count).toBe(2);
+      // Should NOT call getAccounts when filter is not used
+      expect(mockApi.accounts.getAccounts).not.toHaveBeenCalled();
+    });
+
+    it('should work with both excludeTrackingAccounts and excludeBudgetTransfers together', async () => {
+      const mixedTransactions = [
+        {
+          id: 'regular-budget-transaction',
+          date: '2024-01-15',
+          amount: -50000,
+          memo: 'Regular purchase',
+          approved: true,
+          cleared: 'cleared',
+          account_id: 'checking-id',
+          account_name: 'Checking',
+          payee_id: 'payee-1',
+          payee_name: 'Store',
+          category_id: null,
+          category_name: null,
+          flag_color: null,
+          transfer_account_id: null,
+          deleted: false,
+          subtransactions: [],
+        },
+        {
+          id: 'budget-to-budget-transfer',
+          date: '2024-01-15',
+          amount: -100000,
+          memo: 'Transfer to Savings',
+          approved: true,
+          cleared: 'cleared',
+          account_id: 'checking-id',
+          account_name: 'Checking',
+          payee_id: 'transfer-payee',
+          payee_name: 'Transfer : Savings',
+          category_id: null,
+          category_name: null,
+          flag_color: null,
+          transfer_account_id: 'savings-id',
+          deleted: false,
+          subtransactions: [],
+        },
+        {
+          id: 'tracking-account-transaction',
+          date: '2024-01-15',
+          amount: 1000000,
+          memo: 'Reconciliation Balance Adjustment',
+          approved: true,
+          cleared: 'reconciled',
+          account_id: 'investment-id',
+          account_name: 'Investment',
+          payee_id: 'reconcile-payee',
+          payee_name: 'Reconciliation Balance Adjustment',
+          category_id: null,
+          category_name: null,
+          flag_color: null,
+          transfer_account_id: null,
+          deleted: false,
+          subtransactions: [],
+        },
+      ];
+
+      const mockAccounts = [
+        { id: 'checking-id', name: 'Checking', on_budget: true },
+        { id: 'savings-id', name: 'Savings', on_budget: true },
+        { id: 'investment-id', name: 'Investment', on_budget: false },
+      ];
+
+      mockApi.transactions.getTransactions.mockResolvedValue({
+        data: { transactions: mixedTransactions },
+      });
+      mockApi.accounts.getAccounts.mockResolvedValue({
+        data: { accounts: mockAccounts },
+      });
+
+      const result = await SearchTransactionsTool.execute(
+        { sinceDate: '2024-01-01', excludeBudgetTransfers: true, excludeTrackingAccounts: true },
+        mockApi as any
+      );
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.transaction_count).toBe(1);
+      expect(parsed.transactions[0].id).toBe('regular-budget-transaction');
+      // Accounts API should only be called once even with both filters
+      expect(mockApi.accounts.getAccounts).toHaveBeenCalledTimes(1);
+      expect(parsed.filters_applied.exclude_budget_transfers).toBe(true);
+      expect(parsed.filters_applied.exclude_tracking_accounts).toBe(true);
+    });
+
     it('should keep transfers from tracking to budget accounts', async () => {
       const transactionsWithTransfers = [
         {
@@ -826,6 +1050,8 @@ describe('SearchTransactionsTool', () => {
       expect(schema).toHaveProperty('cleared');
       expect(schema).toHaveProperty('approved');
       expect(schema).toHaveProperty('flagColor');
+      expect(schema).toHaveProperty('excludeBudgetTransfers');
+      expect(schema).toHaveProperty('excludeTrackingAccounts');
       expect(schema).toHaveProperty('limit');
     });
   });
